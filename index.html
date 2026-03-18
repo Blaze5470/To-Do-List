@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>To-Do App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="bg-white shadow-lg rounded-2xl p-6 w-full max-w-lg">
+    <h1 class="text-2xl font-bold mb-4">To-Do List</h1>
+
+    <!-- Form -->
+    <div class="mb-4">
+      <input id="taskInput" type="text" placeholder="Task name" class="w-full border p-2 rounded mb-2" />
+      <input id="tagInput" type="text" placeholder="Tag (optional)" class="w-full border p-2 rounded mb-2" />
+      <button onclick="addTask()" class="bg-blue-500 text-white px-4 py-2 rounded w-full">Add Task</button>
+      <p id="error" class="text-red-500 text-sm mt-1"></p>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex gap-2 mb-4 flex-wrap">
+      <button onclick="setFilter('all')" class="px-2 py-1 bg-gray-200 rounded">All</button>
+      <button onclick="setFilter('active')" class="px-2 py-1 bg-gray-200 rounded">Active</button>
+      <button onclick="setFilter('completed')" class="px-2 py-1 bg-gray-200 rounded">Completed</button>
+      <select id="tagFilter" onchange="renderTasks()" class="border p-1 rounded">
+        <option value="">All Tags</option>
+      </select>
+    </div>
+
+    <!-- Counter -->
+    <p id="counter" class="text-sm text-gray-600 mb-2"></p>
+
+    <!-- Task List -->
+    <ul id="taskList" class="space-y-2"></ul>
+  </div>
+
+<script>
+  let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+  let filter = 'all';
+
+  function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }
+
+  function addTask() {
+    const input = document.getElementById('taskInput');
+    const tagInput = document.getElementById('tagInput');
+    const error = document.getElementById('error');
+
+    const text = input.value.trim();
+    const tag = tagInput.value.trim();
+
+    if (!text) {
+      error.textContent = 'Task name is required';
+      return;
+    }
+
+    error.textContent = '';
+
+    const newTask = {
+      id: Date.now(),
+      text,
+      tag,
+      done: false
+    };
+
+    tasks.push(newTask);
+    saveTasks();
+
+    input.value = '';
+    tagInput.value = '';
+
+    renderTasks();
+  }
+
+  function toggleTask(id) {
+    tasks = tasks.map(task =>
+      task.id === id ? { ...task, done: !task.done } : task
+    );
+    saveTasks();
+    renderTasks();
+  }
+
+  function deleteTask(id) {
+    tasks = tasks.filter(task => task.id !== id);
+    saveTasks();
+    renderTasks();
+  }
+
+  function setFilter(f) {
+    filter = f;
+    renderTasks();
+  }
+
+  function getFilteredTasks() {
+    let filtered = tasks;
+
+    if (filter === 'active') {
+      filtered = filtered.filter(t => !t.done);
+    } else if (filter === 'completed') {
+      filtered = filtered.filter(t => t.done);
+    }
+
+    const tagFilter = document.getElementById('tagFilter').value;
+    if (tagFilter) {
+      filtered = filtered.filter(t => t.tag === tagFilter);
+    }
+
+    return filtered;
+  }
+
+  function updateTagDropdown() {
+    const select = document.getElementById('tagFilter');
+    const tags = [...new Set(tasks.map(t => t.tag).filter(Boolean))];
+
+    select.innerHTML = '<option value="">All Tags</option>';
+    tags.forEach(tag => {
+      const option = document.createElement('option');
+      option.value = tag;
+      option.textContent = tag;
+      select.appendChild(option);
+    });
+  }
+
+  function updateCounter() {
+    const activeCount = tasks.filter(t => !t.done).length;
+    document.getElementById('counter').textContent = `${activeCount} active tasks`;
+  }
+
+  function renderTasks() {
+    const list = document.getElementById('taskList');
+    list.innerHTML = '';
+
+    const filtered = getFilteredTasks();
+
+    filtered.forEach(task => {
+      const li = document.createElement('li');
+      li.className = 'flex justify-between items-center border p-2 rounded';
+
+      li.innerHTML = `
+        <div>
+          <span class="${task.done ? 'line-through text-gray-400' : ''}">${task.text}</span>
+          ${task.tag ? `<span class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded">${task.tag}</span>` : ''}
+        </div>
+        <div class="flex gap-2">
+          <button onclick="toggleTask(${task.id})" class="text-green-500">✔</button>
+          <button onclick="deleteTask(${task.id})" class="text-red-500">✖</button>
+        </div>
+      `;
+
+      list.appendChild(li);
+    });
+
+    updateTagDropdown();
+    updateCounter();
+  }
+
+  renderTasks();
+</script>
+</body>
+</html>
